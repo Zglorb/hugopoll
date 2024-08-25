@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Poll</title>
+</head>
+<body>
+    <!-- <div>
+        <button onclick="showPoll()">Show Poll</button>
+        <button onclick="hidePoll()">Hide Poll</button>
+        <input id="changeInput" type="text" onchange="handleChange()"/>
+    </div> -->
+    <div id="main">
+        <div class="question">
+            <span>QUI VA GAGNER LA COURSE ENTRE ?</span>
+        </div>
+        <video autoplay loop class="background">
+            <source src="/output.webm" type="video/webm">
+        </video>
+        <div id="poll-content">
+            <div class="selection">
+                <video autoplay loop class="head">
+                    <source src="/TETE/BIBI.webm" type="video/webm">
+                </video>
+                <div class="poll-bar">
+                    <span style="color: black; font-size: 40px; font-weight: bold;">100%</span>
+                </div>
+            </div>
+            <div class="selection">
+                <video autoplay loop class="head odd">
+                    <source src="/TETE/HUGO.webm" type="video/webm">
+                </video>
+                <div class="poll-bar" style="width: 50%;">
+                    <span style="color: black; font-size: 40px; font-weight: bold;">50%</span>
+                </div>
+            </div>
+            <div class="selection">
+                <video autoplay loop class="head">
+                    <source src="/TETE/JEAN.webm" type="video/webm">
+                </video>
+                <div class="poll-bar" style="width: 60%;">
+                    <span style="color: black; font-size: 40px; font-weight: bold;">60%</span>
+                </div>
+            </div>
+            <div class="selection">
+                <video autoplay loop class="head odd">
+                    <source src="/TETE/KOTEI.webm" type="video/webm">
+                </video>
+                <div class="poll-bar" style="width: 26%;">
+                    <span style="color: black; font-size: 40px; font-weight: bold;">26%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const poll = document.getElementById('main');
+        const polldata = {
+            question: 'QUI VA GAGNER LA COURSE ?',
+            choices: [
+                { name: 'BIBI', percentage: 100, pollbar: null },
+                { name: 'HUGO', percentage: 50, pollbar: null },
+                { name: 'JEAN', percentage: 60, pollbar: null },
+                { name: 'KOTEI', percentage: 26, pollbar: null }
+            ]
+        };
+        const profiles = {
+            BIBI: '/TETE/BIBI.webm',
+            HUGO: '/TETE/HUGO.webm',
+            JEAN: '/TETE/JEAN.webm',
+            KOTEI: '/TETE/KOTEI.webm',
+            LEOPOLD: '/TETE/LEOPOLD.webm',
+            MASTU: '/TETE/MASTU.webm',
+            POTA: '/TETE/POTA.webm',
+            TERRA: '/TETE/TERRA.webm',
+            THEO: '/TETE/THEO.webm',
+        }
+        setupPoll();
+        function setupPoll() {
+            changeQuestion(polldata.question);
+            const pollContent = document.getElementById('poll-content');
+            pollContent.innerHTML = '';
+            polldata.choices.forEach((choice, index) => {
+                const selection = document.createElement('div');
+                selection.classList.add('selection');
+                let head;
+                // if this is a profile
+                if (profiles.hasOwnProperty(choice.name)) {
+                    head = document.createElement('video');
+                    head.autoplay = true;
+                    head.loop = true;
+                    head.classList.add('head');
+                    head.src = profiles[choice.name];
+                    if(index % 2 === 1) {
+                        selection.classList.add('odd');
+                    }
+                } // else this is a text question
+                else {
+                    head = document.createElement('span');
+                    head.classList.add('text-choice');
+                    head.innerText = choice.name;
+                }
+                const pollBar = document.createElement('div');
+                pollBar.classList.add('poll-bar');
+                pollBar.style.width = `${choice.percentage}%`;
+                choice.pollbar = pollBar;
+                const percentage = document.createElement('span');
+                percentage.style.color = 'black';
+                percentage.style.fontSize = '40px';
+                percentage.style.fontWeight = 'bold';
+                percentage.innerText = `${choice.percentage}%`;
+                pollBar.appendChild(percentage);
+                selection.appendChild(head);
+                selection.appendChild(pollBar);
+                document.getElementById('poll-content').appendChild(selection);
+            });
+        }
+        function hidePoll() {
+            poll.style.display = 'none';
+        }
+        function showPoll() {
+            poll.style.display = 'block';
+        }
+        function changeQuestion(question) {
+            document.querySelector('.question span').innerText = question;
+        }
+        function handleChange(event) {
+            changeQuestion(document.getElementById('changeInput').value);
+        }
+        hidePoll();
+
+        const socket = new WebSocket('wss://eventsub.wss.twitch.tv/ws');
+        socket.onopen = function() {
+            console.log('Connected to the server');
+        }
+        socket.onmessage = function(event) {
+            // console.log('Message received', event.data);
+            const data = JSON.parse(event.data);
+            // console.log('Data', data);
+            if(data.metadata.message_type === 'session_welcome'){
+                console.log('session_id', data.payload.session.id);
+                fetch('http://51.38.223.211:3000/api/subscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        key: data.payload.session.id
+                    })
+                })
+            }
+            else {
+                switch(data.metadata.subscription_type) {
+                    case 'channel.poll.begin':
+                        HandlePollStart(data.payload);
+                        break;
+                    case 'channel.poll.end':
+                        HandlePollEnd(data.payload);
+                        break;
+                    case 'channel.poll.progress':
+                        HandlePollUpdate(data.payload);
+                        break;
+                }
+            }
+        }
+
+        function HandlePollUpdate(data) {
+            console.log('Poll update', data);
+            let totalVotes = 0;
+            const choices = data.event.choices;
+            totalVotes = choices.reduce((acc, choice) => {
+                return acc + choice.votes;
+            }, 0);
+            polldata.choices.forEach(choice => {
+                const choiceData = choices.find(c => c.title === choice.name);
+                if(choiceData) {
+                    choice.percentage = Math.round((choiceData.votes / totalVotes) * 100);
+                    choice.pollbar.style.width = `${choice.percentage}%`;
+                    choice.pollbar.querySelector('span').innerText = `${choice.percentage}%`;
+                }
+            });
+            showPoll();
+        }
+        function HandlePollStart(data) {
+            const choices = data.event.choices;
+            const title = data.event.title;
+            polldata.question = title;
+            polldata.choices = choices.map(choice => {
+                return {
+                    name: choice.title,
+                    percentage: 0
+                }
+            });
+            setupPoll();
+            console.log('Poll start', data);
+            showPoll();
+        }
+        function HandlePollEnd(data) {
+            hidePoll();
+        }
+        // setInterval(() => {
+        //     socket.send("PONG")
+        // }, 5000);
+        
+
+
+    </script>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nerko+One&display=swap');
+    .background {
+        width: 1280px;
+        z-index: -1000;
+    }
+    .head {
+        height: 200px;
+        width: auto;
+        z-index: -1000;
+    }
+    #poll-content {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        position: absolute;
+        left: 100px;
+        top: 140px;
+        width: 1000px;
+        height: 500px;
+        z-index: 1000;
+    }
+    #main {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        margin-top: 100px;
+    }
+    .poll-bar {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 64px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        box-shadow:  0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+        font-family: "Nerko One", cursive;
+        font-size: 64px;
+        min-width: 10%;
+    }
+    .selection {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: start;
+        width: 100%;
+        height: 128px;
+    }
+    .question {
+        position: absolute;
+        left: 40%;
+        top: -10px;
+        font-size: 64px;
+        color: rgb(255, 255, 255);
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.801);
+        transform: translateX(-50%);
+        font-family: "Nerko One", cursive;
+        font-weight: 400;
+        font-style: normal;
+        z-index: 1001;
+        height: 160px;
+        width: 900px;
+        text-align: center;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+    }
+    .odd {
+        margin-left: 120px;
+    }
+    .text-choice {
+        color: black;
+        font-size: 40px;
+        font-weight: bold;
+        font-family: "Nerko One", cursive;
+        margin-left: 20px;
+        margin-right: 20px;
+        width: 200px;
+    }
+    </style>
+</body>
+</html>
