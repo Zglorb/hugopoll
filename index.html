@@ -128,7 +128,7 @@
         function handleChange(event) {
             changeQuestion(document.getElementById('changeInput').value);
         }
-        showPoll();
+        hidePoll();
 
         const socket = new WebSocket('wss://eventsub.wss.twitch.tv/ws');
         socket.onopen = function() {
