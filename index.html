@@ -98,7 +98,7 @@
                     head.classList.add('text-choice');
                     head.innerText = choice.name;
                     if(index % 2 === 1) {
-                        selection.classList.add('odd');
+                        head.classList.add('white');
                     }
                 }
                 const pollBar = document.createElement('div');
@@ -181,6 +181,9 @@
                     choice.pollbar.querySelector('span').innerText = `${choice.percentage}%`;
                 }
             });
+            if(poll.style.display === 'none'){
+                setupPoll();
+            }
             showPoll();
         }
         function HandlePollStart(data) {
@@ -279,7 +282,9 @@
     }
     .odd {
         margin-left: 120px;
-        color: white;
+    }
+    .white{
+        color: white !important;
     }
     .text-choice {
         color: black;
@@ -289,6 +294,8 @@
         margin-left: 20px;
         margin-right: 60px;
         width: 200px;
+        overflow-wrap: anywhere;
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.801);
     }
     </style>
 </body>
