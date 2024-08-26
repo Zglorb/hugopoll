@@ -83,12 +83,12 @@
                 selection.classList.add('selection');
                 let head;
                 // if this is a profile
-                if (profiles.hasOwnProperty(choice.name)) {
+                if (profiles.hasOwnProperty(choice.name.toUpperCase().trim())){
                     head = document.createElement('video');
                     head.autoplay = true;
                     head.loop = true;
                     head.classList.add('head');
-                    head.src = profiles[choice.name];
+                    head.src = profiles[choice.name.toUpperCase().trim()];
                     if(index % 2 === 1) {
                         selection.classList.add('odd');
                     }
@@ -168,6 +168,9 @@
 
         function HandlePollUpdate(data) {
             console.log('Poll update', data);
+            if(poll.style.display === 'none'){
+                HandlePollStart(data);
+            }
             let totalVotes = 0;
             const choices = data.event.choices;
             totalVotes = choices.reduce((acc, choice) => {
@@ -181,9 +184,6 @@
                     choice.pollbar.querySelector('span').innerText = `${choice.percentage}%`;
                 }
             });
-            if(poll.style.display === 'none'){
-                setupPoll();
-            }
             showPoll();
         }
         function HandlePollStart(data) {
