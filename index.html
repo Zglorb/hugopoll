@@ -97,6 +97,9 @@
                     head = document.createElement('span');
                     head.classList.add('text-choice');
                     head.innerText = choice.name;
+                    if(index % 2 === 1) {
+                        selection.classList.add('odd');
+                    }
                 }
                 const pollBar = document.createElement('div');
                 pollBar.classList.add('poll-bar');
@@ -125,7 +128,7 @@
         function handleChange(event) {
             changeQuestion(document.getElementById('changeInput').value);
         }
-        hidePoll();
+        showPoll();
 
         const socket = new WebSocket('wss://eventsub.wss.twitch.tv/ws');
         socket.onopen = function() {
@@ -153,7 +156,8 @@
                         HandlePollStart(data.payload);
                         break;
                     case 'channel.poll.end':
-                        HandlePollEnd(data.payload);
+                        if (data.payload.event.status === 'completed')
+                            HandlePollEnd(data.payload);
                         break;
                     case 'channel.poll.progress':
                         HandlePollUpdate(data.payload);
@@ -275,6 +279,7 @@
     }
     .odd {
         margin-left: 120px;
+        color: white;
     }
     .text-choice {
         color: black;
@@ -282,7 +287,7 @@
         font-weight: bold;
         font-family: "Nerko One", cursive;
         margin-left: 20px;
-        margin-right: 20px;
+        margin-right: 60px;
         width: 200px;
     }
     </style>
